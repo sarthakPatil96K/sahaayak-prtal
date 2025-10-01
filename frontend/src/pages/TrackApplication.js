@@ -23,13 +23,39 @@ const TrackApplication = () => {
     ]
   };
 
-  const handleTrack = (e) => {
-    e.preventDefault();
-    if (trackingId) {
-      // In real app, this would be an API call
-      setApplication(mockApplication);
+  const handleTrack = async (e) => {
+  e.preventDefault();
+  if (trackingId) {
+    try {
+      // Show loading state
+      const trackButton = e.target.querySelector('button[type="submit"]');
+      const originalText = trackButton.textContent;
+      trackButton.textContent = 'Tracking...';
+      trackButton.disabled = true;
+
+      // API call
+      const response = await apiService.getApplicationById(trackingId);
+      
+      if (response.success) {
+        setApplication(response.data);
+      } else {
+        alert(`Application not found: ${response.message}`);
+        setApplication(null);
+      }
+    } catch (error) {
+      console.error('Tracking error:', error);
+      alert(`Error tracking application: ${error.message}`);
+      setApplication(null);
+    } finally {
+      // Reset button state
+      const trackButton = e.target.querySelector('button[type="submit"]');
+      if (trackButton) {
+        trackButton.textContent = 'Track Application';
+        trackButton.disabled = false;
+      }
     }
-  };
+  }
+};
 
   const getStatusColor = (status) => {
     switch (status) {

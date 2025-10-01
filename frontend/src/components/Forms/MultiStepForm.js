@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircleIcon, 
@@ -130,28 +131,15 @@ const handleSubmit = async (e) => {
     submitButton.textContent = 'Submitting...';
     submitButton.disabled = true;
 
-    console.log('📤 Submitting application:', formData);
+    console.log('📤 Submitting application data:', formData);
 
-    // API call
-    const response = await fetch('http://localhost:5000/api/applications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    });
-
-    console.log('📥 Response status:', response.status);
-
-    const result = await response.json();
-    console.log('📥 Response data:', result);
-
-    if (!response.ok) {
-      throw new Error(result.message || `HTTP error! status: ${response.status}`);
-    }
-
-    if (result.success) {
-      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${result.data.id}\nAmount: ₹${result.data.amount}\nStatus: ${result.data.status}\n\nPlease save your Tracking ID for future reference.`);
+    // API call using the service
+    const response = await apiService.createApplication(formData);
+    
+    console.log('✅ API Response:', response);
+    
+    if (response.success) {
+      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${response.data.id}\n\nPlease save this ID for future reference.`);
       
       // Reset form
       setCurrentStep(1);
@@ -184,15 +172,13 @@ const handleSubmit = async (e) => {
         }
       });
     } else {
-      throw new Error(result.message || 'Failed to submit application');
+      alert(`❌ Failed to submit application: ${response.message}`);
     }
   } catch (error) {
     console.error('❌ Submission error:', error);
     
-    if (error.message.includes('fetch') || error.message.includes('Network')) {
-      alert('🔌 Network Error!\n\nPlease ensure:\n1. Backend server is running on port 5000\n2. No firewall blocking the connection\n3. Check browser console (F12) for details');
-    } else if (error.message.includes('HTTP error')) {
-      alert(`❌ Server Error: ${error.message}\n\nPlease check backend server logs.`);
+    if (error.message.includes('connect') || error.message.includes('CORS') || error.message.includes('fetch')) {
+      alert(`🔌 Connection Error!\n\n${error.message}\n\nPlease ensure:\n1. Backend server is running on port 5000\n2. Check browser console for details`);
     } else {
       alert(`❌ Error: ${error.message}`);
     }

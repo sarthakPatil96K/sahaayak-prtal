@@ -10,10 +10,11 @@ import {
   HeartIcon
 } from '@heroicons/react/24/outline';
 import ApplicationDetailsModal from '../components/ApplicationDetailsModal';
+import { apiService } from '../services/api';
 
 const OfficerDashboard = () => {
   const [activeTab, setActiveTab] = useState('all');
-  const [applicationType, setApplicationType] = useState('all'); // 'victim' or 'marriage' or 'all'
+  const [applicationType, setApplicationType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [victimApplications, setVictimApplications] = useState([]);
   const [marriageApplications, setMarriageApplications] = useState([]);
@@ -66,24 +67,36 @@ const OfficerDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch victim applications
-      const victimResponse = await fetch('http://localhost:5000/api/applications');
-      const victimResult = await victimResponse.json();
+      // Fetch victim applications using API service
+      const victimResult = await apiService.getApplications();
       
-      // Fetch marriage applications
-      const marriageResponse = await fetch('http://localhost:5000/api/intercaste-marriage');
-      const marriageResult = await marriageResponse.json();
+      // Fetch marriage applications - using direct fetch for now
+      let marriageResult = { success: false, data: [] };
+      try {
+        const marriageResponse = await fetch('http://localhost:5000/api/intercaste-marriage');
+        if (marriageResponse.ok) {
+          marriageResult = await marriageResponse.json();
+        }
+      } catch (error) {
+        console.warn('Marriage applications endpoint not available:', error);
+      }
       
       if (victimResult.success) {
-        setVictimApplications(victimResult.data);
+        setVictimApplications(victimResult.data || []);
+      } else {
+        setVictimApplications([]);
       }
       
       if (marriageResult.success) {
-        setMarriageApplications(marriageResult.data);
+        setMarriageApplications(marriageResult.data || []);
+      } else {
+        setMarriageApplications([]);
       }
     } catch (error) {
       console.error('Error fetching applications:', error);
       alert('Failed to fetch applications. Please check if backend is running.');
+      setVictimApplications([]);
+      setMarriageApplications([]);
     } finally {
       setLoading(false);
     }
@@ -104,13 +117,17 @@ const OfficerDashboard = () => {
 
     // Filter by search term
     const searchFiltered = applications.filter(app => {
-      const matchesSearch = app.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (app.personalDetails?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            app.coupleDetails?.husbandName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            app.coupleDetails?.wifeName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                           (app.personalDetails?.aadhaarNumber?.includes(searchTerm) || 
-                            app.coupleDetails?.husbandAadhaar?.includes(searchTerm) ||
-                            app.coupleDetails?.wifeAadhaar?.includes(searchTerm));
+      if (!app) return false;
+      
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        (app.id && app.id.toLowerCase().includes(searchLower)) ||
+        (app.personalDetails?.fullName?.toLowerCase().includes(searchLower)) || 
+        (app.coupleDetails?.husbandName?.toLowerCase().includes(searchLower)) ||
+        (app.coupleDetails?.wifeName?.toLowerCase().includes(searchLower)) ||
+        (app.personalDetails?.aadhaarNumber?.includes(searchTerm)) || 
+        (app.coupleDetails?.husbandAadhaar?.includes(searchTerm)) ||
+        (app.coupleDetails?.wifeAadhaar?.includes(searchTerm));
       
       const matchesTab = activeTab === 'all' ? true :
                         activeTab === 'pending' ? app.status === 'pending' :
@@ -131,86 +148,83 @@ const OfficerDashboard = () => {
 
   const handleVerify = async (applicationId, isMarriage = false) => {
     try {
-      const endpoint = isMarriage ? 
-        `http://localhost:5000/api/intercaste-marriage/${applicationId}/status` :
-        `http://localhost:5000/api/applications/${applicationId}/status`;
+      let result;
       
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'verified' }),
-      });
-      
-      const result = await response.json();
+      if (isMarriage) {
+        const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'verified' }),
+        });
+        result = await response.json();
+      } else {
+        result = await apiService.updateApplicationStatus(applicationId, 'verified');
+      }
       
       if (result.success) {
         alert('Application verified successfully!');
         fetchApplications();
       } else {
-        alert('Failed to verify application');
+        alert('Failed to verify application: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error verifying application:', error);
-      alert('Error verifying application. Please check backend connection.');
+      alert('Error verifying application: ' + error.message);
     }
   };
 
   const handleApprove = async (applicationId, isMarriage = false) => {
     try {
-      const endpoint = isMarriage ? 
-        `http://localhost:5000/api/intercaste-marriage/${applicationId}/status` :
-        `http://localhost:5000/api/applications/${applicationId}/status`;
+      let result;
       
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'approved' }),
-      });
-      
-      const result = await response.json();
+      if (isMarriage) {
+        const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'approved' }),
+        });
+        result = await response.json();
+      } else {
+        result = await apiService.updateApplicationStatus(applicationId, 'approved');
+      }
       
       if (result.success) {
         alert('Application approved successfully! DBT will be processed.');
         fetchApplications();
       } else {
-        alert('Failed to approve application');
+        alert('Failed to approve application: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error approving application:', error);
-      alert('Error approving application. Please check backend connection.');
+      alert('Error approving application: ' + error.message);
     }
   };
 
   const handleReject = async (applicationId, isMarriage = false) => {
     if (window.confirm('Are you sure you want to reject this application?')) {
       try {
-        const endpoint = isMarriage ? 
-          `http://localhost:5000/api/intercaste-marriage/${applicationId}/status` :
-          `http://localhost:5000/api/applications/${applicationId}/status`;
+        let result;
         
-        const response = await fetch(endpoint, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status: 'rejected' }),
-        });
-        
-        const result = await response.json();
+        if (isMarriage) {
+          const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'rejected' }),
+          });
+          result = await response.json();
+        } else {
+          result = await apiService.updateApplicationStatus(applicationId, 'rejected');
+        }
         
         if (result.success) {
           alert('Application rejected successfully!');
           fetchApplications();
         } else {
-          alert('Failed to reject application');
+          alert('Failed to reject application: ' + (result.message || 'Unknown error'));
         }
       } catch (error) {
         console.error('Error rejecting application:', error);
-        alert('Error rejecting application. Please check backend connection.');
+        alert('Error rejecting application: ' + error.message);
       }
     }
   };
@@ -231,6 +245,8 @@ const OfficerDashboard = () => {
   };
 
   const getApplicationTypeBadge = (application) => {
+    if (!application) return null;
+    
     const isMarriage = application.coupleDetails !== undefined;
     const config = isMarriage ? 
       { color: 'bg-pink-100 text-pink-800', label: 'Marriage', icon: HeartIcon } :
@@ -247,7 +263,16 @@ const OfficerDashboard = () => {
   };
 
   const getPriorityBadge = (application) => {
-    const daysAgo = Math.floor((new Date() - new Date(application.createdAt)) / (1000 * 60 * 60 * 24));
+    if (!application || !application.createdAt) {
+      return { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+    }
+    
+    const createdDate = new Date(application.createdAt);
+    if (isNaN(createdDate.getTime())) {
+      return { color: 'bg-gray-100 text-gray-800', label: 'Unknown' };
+    }
+    
+    const daysAgo = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
     
     if (daysAgo > 7) return { color: 'bg-red-100 text-red-800', label: 'High' };
     if (daysAgo > 3) return { color: 'bg-orange-100 text-orange-800', label: 'Medium' };
@@ -255,17 +280,45 @@ const OfficerDashboard = () => {
   };
 
   const getApplicantName = (application) => {
+    if (!application) return 'N/A';
+    
     if (application.coupleDetails) {
-      return `${application.coupleDetails.husbandName} & ${application.coupleDetails.wifeName}`;
+      return `${application.coupleDetails.husbandName || 'N/A'} & ${application.coupleDetails.wifeName || 'N/A'}`;
     }
     return application.personalDetails?.fullName || 'N/A';
   };
 
   const getApplicationDetails = (application) => {
+    if (!application) return 'N/A';
+    
     if (application.coupleDetails) {
-      return `Marriage: ${application.coupleDetails.husbandCaste} + ${application.coupleDetails.wifeCaste}`;
+      return `Marriage: ${application.coupleDetails.husbandCaste || 'N/A'} + ${application.coupleDetails.wifeCaste || 'N/A'}`;
     }
     return `Incident: ${application.incidentDetails?.type || 'N/A'}`;
+  };
+
+  const getCreatedDate = (application) => {
+    if (!application || !application.createdAt) return 'N/A';
+    
+    try {
+      const date = new Date(application.createdAt);
+      return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const getDaysAgo = (application) => {
+    if (!application || !application.createdAt) return 0;
+    
+    try {
+      const createdDate = new Date(application.createdAt);
+      if (isNaN(createdDate.getTime())) return 0;
+      
+      return Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+    } catch {
+      return 0;
+    }
   };
 
   if (loading) {
@@ -406,8 +459,10 @@ const OfficerDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredApplications.map((application) => {
+                  if (!application) return null;
+                  
                   const priority = getPriorityBadge(application);
-                  const daysAgo = Math.floor((new Date() - new Date(application.createdAt)) / (1000 * 60 * 60 * 24));
+                  const daysAgo = getDaysAgo(application);
                   const isMarriage = application.coupleDetails !== undefined;
                   
                   return (
@@ -417,7 +472,7 @@ const OfficerDashboard = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{application.id}</div>
+                          <div className="text-sm font-medium text-gray-900">{application.id || 'N/A'}</div>
                           <div className="mt-1">
                             {getApplicationTypeBadge(application)}
                           </div>
@@ -426,8 +481,8 @@ const OfficerDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{getApplicantName(application)}</div>
                         <div className="text-sm text-gray-500">{getApplicationDetails(application)}</div>
-                        {!isMarriage && (
-                          <div className="text-xs text-gray-400">{application.incidentDetails?.location}</div>
+                        {!isMarriage && application.incidentDetails?.location && (
+                          <div className="text-xs text-gray-400">{application.incidentDetails.location}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -435,12 +490,12 @@ const OfficerDashboard = () => {
                           ₹{(application.amount || 0).toLocaleString()}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {new Date(application.createdAt).toLocaleDateString()}
+                          {getCreatedDate(application)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col space-y-2">
-                          {getStatusBadge(application.status)}
+                          {getStatusBadge(application.status || 'pending')}
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${priority.color}`}>
                             {priority.label} Priority
                           </span>
@@ -459,17 +514,17 @@ const OfficerDashboard = () => {
                             View Details
                           </button>
                           
-                          {application.status === 'pending' && (
+                          {(application.status === 'pending' || !application.status) && (
                             <div className="flex space-x-2">
                               <button 
                                 onClick={() => handleVerify(application.id, isMarriage)}
-                                className="text-green-600 hover:text-green-800 font-medium flex-1 text-center border border-green-600 rounded px-2 py-1"
+                                className="text-green-600 hover:text-green-800 font-medium flex-1 text-center border border-green-600 rounded px-2 py-1 text-xs"
                               >
                                 Verify
                               </button>
                               <button 
                                 onClick={() => handleReject(application.id, isMarriage)}
-                                className="text-red-600 hover:text-red-800 font-medium flex-1 text-center border border-red-600 rounded px-2 py-1"
+                                className="text-red-600 hover:text-red-800 font-medium flex-1 text-center border border-red-600 rounded px-2 py-1 text-xs"
                               >
                                 Reject
                               </button>
@@ -480,13 +535,13 @@ const OfficerDashboard = () => {
                             <div className="flex space-x-2">
                               <button 
                                 onClick={() => handleApprove(application.id, isMarriage)}
-                                className="text-green-600 hover:text-green-800 font-medium flex-1 text-center border border-green-600 rounded px-2 py-1"
+                                className="text-green-600 hover:text-green-800 font-medium flex-1 text-center border border-green-600 rounded px-2 py-1 text-xs"
                               >
                                 Approve
                               </button>
                               <button 
                                 onClick={() => handleReject(application.id, isMarriage)}
-                                className="text-red-600 hover:text-red-800 font-medium flex-1 text-center border border-red-600 rounded px-2 py-1"
+                                className="text-red-600 hover:text-red-800 font-medium flex-1 text-center border border-red-600 rounded px-2 py-1 text-xs"
                               >
                                 Reject
                               </button>
@@ -528,11 +583,13 @@ const OfficerDashboard = () => {
         </div>
 
         {/* Application Details Modal */}
-        <ApplicationDetailsModal
-          application={selectedApplication}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
+        {selectedApplication && (
+          <ApplicationDetailsModal
+            application={selectedApplication}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+          />
+        )}
       </div>
     </div>
   );
