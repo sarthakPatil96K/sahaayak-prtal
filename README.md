@@ -48,13 +48,13 @@ npm install
 
 **Backend Environment** (`backend/.env`):
 ```env
-PORT=5000
+PORT=8080
 NODE_ENV=development
 ```
 
 **Frontend Environment** (`frontend/.env`):
 ```env
-REACT_APP_API_URL=http://localhost:5000
+REACT_APP_API_URL=http://localhost:3000
 ```
 
 ### 4. Start Development Servers
@@ -77,7 +77,7 @@ npm start
 ```
 
 ### 5. Verify Setup
-- **Backend**: Open http://localhost:5000/api
+- **Backend**: Open http://localhost:8080/api
 - **Frontend**: Open http://localhost:3000
 - You should see the SAHAAYAK homepage!
 
@@ -265,7 +265,7 @@ cd backend && npm run dev
 cd frontend && npm start
 
 # Check application status
-curl http://localhost:5000/api/health
+curl http://localhost:8080/api/health
 ```
 
 ### Git Best Practices
