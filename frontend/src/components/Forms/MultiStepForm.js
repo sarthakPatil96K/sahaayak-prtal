@@ -9,6 +9,32 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
+// Simple API service function - define it directly to avoid import issues
+const submitApplication = async (applicationData) => {
+  try {
+    console.log('📤 Submitting application data to port 8080...', applicationData);
+
+    const response = await fetch('http://localhost:8080/api/applications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(applicationData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw new Error('Unable to connect to server. Please check if the backend is running on port 8080.');
+  }
+};
+
 const MultiStepForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -117,6 +143,8 @@ const mockBankVerification = async (accountNumber, ifscCode) => {
     }
     return true;
   };
+
+  
 const handleSubmit = async (e) => {
   e.preventDefault();
   
@@ -133,13 +161,42 @@ const handleSubmit = async (e) => {
 
     console.log('📤 Submitting application data:', formData);
 
-    // API call using the service
-    const response = await apiService.createApplication(formData);
+    // API call
+    const response = await fetch('http://localhost:8080/api/applications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    console.log('📨 Response status:', response.status);
     
-    console.log('✅ API Response:', response);
+    const result = await response.json();
+    console.log('📨 Full response:', result);
     
-    if (response.success) {
-      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${response.data.id}\n\nPlease save this ID for future reference.`);
+    if (!response.ok) {
+      throw new Error(result.message || `Server error: ${response.status}`);
+    }
+    
+    if (result.success) {
+      // Handle different possible tracking ID locations
+      let trackingId;
+      if (result.data && result.data.applicationId) {
+        trackingId = result.data.applicationId;
+      } else if (result.data && result.data.id) {
+        trackingId = result.data.id;
+      } else if (result.trackingId) {
+        trackingId = result.trackingId;
+      } else if (result.data && result.data._id) {
+        trackingId = result.data._id;
+      } else {
+        trackingId = 'Unknown ID - Please contact support';
+      }
+      
+      console.log('🆔 Extracted Tracking ID:', trackingId);
+      
+      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${trackingId}\n\nPlease save this ID for future reference.`);
       
       // Reset form
       setCurrentStep(1);
@@ -172,16 +229,11 @@ const handleSubmit = async (e) => {
         }
       });
     } else {
-      alert(`❌ Failed to submit application: ${response.message}`);
+      alert(`❌ Failed to submit application: ${result.message}`);
     }
   } catch (error) {
     console.error('❌ Submission error:', error);
-    
-    if (error.message.includes('connect') || error.message.includes('CORS') || error.message.includes('fetch')) {
-      alert(`🔌 Connection Error!\n\n${error.message}\n\nPlease ensure:\n1. Backend server is running on port 5000\n2. Check browser console for details`);
-    } else {
-      alert(`❌ Error: ${error.message}`);
-    }
+    alert(`❌ Error: ${error.message}`);
   } finally {
     // Reset button state
     const submitButton = e.target.querySelector('button[type="submit"]');

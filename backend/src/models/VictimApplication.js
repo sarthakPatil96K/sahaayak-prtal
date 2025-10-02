@@ -1,162 +1,135 @@
 const mongoose = require('mongoose');
 
-const incidentSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    required: true,
-    enum: ['discrimination', 'atrocity', 'land_rights', 'employment', 'education', 'other']
-  },
-  date: {
-    type: Date,
-    required: true
-  },
-  location: {
-    address: String,
-    city: String,
-    district: String,
-    state: String,
-    pincode: String
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  witnesses: [{
-    name: String,
-    contact: String,
-    address: String
-  }],
-  policeComplaint: {
-    filed: Boolean,
-    firNumber: String,
-    policeStation: String,
-    complaintDate: Date
-  },
-  evidenceDocuments: [{
-    documentType: String,
-    documentUrl: String,
-    uploadedAt: Date
-  }]
-});
-
-const bankSchema = new mongoose.Schema({
-  accountHolderName: {
-    type: String,
-    required: true
-  },
-  accountNumber: {
-    type: String,
-    required: true
-  },
-  ifscCode: {
-    type: String,
-    required: true,
-    match: [/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Please provide a valid IFSC code']
-  },
-  bankName: {
-    type: String,
-    required: true
-  },
-  branch: String,
-  verified: {
-    type: Boolean,
-    default: false
-  },
-  verificationDate: Date
-});
-
 const victimApplicationSchema = new mongoose.Schema({
   applicationId: {
     type: String,
     required: true,
-    unique: true
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    unique: true,
+    index: true
   },
   personalDetails: {
-    fullName: String,
-    aadhaarNumber: String,
-    mobileNumber: String,
-    email: String,
-    address: {
-      street: String,
-      city: String,
-      district: String,
-      state: String,
-      pincode: String
-    }
+    fullName: { 
+      type: String, 
+      required: [true, 'Full name is required'],
+      trim: true
+    },
+    aadhaarNumber: { 
+      type: String, 
+      required: [true, 'Aadhaar number is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{12}$/.test(v);
+        },
+        message: 'Aadhaar number must be 12 digits'
+      }
+    },
+    mobileNumber: { 
+      type: String, 
+      required: [true, 'Mobile number is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{10}$/.test(v);
+        },
+        message: 'Mobile number must be 10 digits'
+      }
+    },
+    email: { 
+      type: String,
+      lowercase: true,
+      validate: {
+        validator: function(v) {
+          return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        },
+        message: 'Invalid email format'
+      }
+    },
+    address: { 
+      type: String, 
+      required: [true, 'Address is required'],
+      trim: true
+    },
+    pincode: { 
+      type: String,
+      validate: {
+        validator: function(v) {
+          return !v || /^\d{6}$/.test(v);
+        },
+        message: 'Pincode must be 6 digits'
+      }
+    },
+    state: { type: String, trim: true },
+    district: { type: String, trim: true }
   },
-  incidentDetails: incidentSchema,
-  bankDetails: bankSchema,
+  incidentDetails: {
+    type: { 
+      type: String, 
+      required: [true, 'Incident type is required'],
+      enum: ['discrimination', 'atrocity', 'land_rights', 'employment', 'education', 'other']
+    },
+    date: { 
+      type: Date, 
+      required: [true, 'Incident date is required'] 
+    },
+    location: { 
+      type: String, 
+      required: [true, 'Incident location is required'],
+      trim: true
+    },
+    description: { 
+      type: String, 
+      required: [true, 'Incident description is required'],
+      trim: true
+    },
+    witnesses: { type: String, trim: true },
+    policeComplaint: { type: Boolean, default: false },
+    complaintNumber: { type: String, trim: true }
+  },
+  bankDetails: {
+    accountNumber: { 
+      type: String, 
+      required: [true, 'Account number is required'],
+      trim: true
+    },
+    ifscCode: { 
+      type: String, 
+      required: [true, 'IFSC code is required'],
+      trim: true,
+      uppercase: true
+    },
+    bankName: { 
+      type: String, 
+      required: [true, 'Bank name is required'],
+      trim: true
+    },
+    accountHolderName: { 
+      type: String, 
+      required: [true, 'Account holder name is required'],
+      trim: true
+    },
+    branch: { type: String, trim: true }
+  },
   status: {
     type: String,
-    enum: ['pending', 'under_review', 'verified', 'approved', 'rejected', 'disbursed'],
-    default: 'pending'
+    enum: ['pending', 'verified', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
   },
   amount: {
     type: Number,
-    required: true,
     default: 50000
   },
-  assignedOfficer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Officer'
-  },
-  processingHistory: [{
-    status: String,
-    actionBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Officer'
-    },
-    comments: String,
-    timestamp: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  disbursementDetails: {
-    disbursedAmount: Number,
-    transactionId: String,
-    disbursedAt: Date,
-    utrNumber: String,
-    bankResponse: String
-  },
-  rejectionReason: String,
-  priority: {
+  applicationType: {
     type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+    default: 'victim',
+    immutable: true
   }
+}, {
+  timestamps: true
 });
 
-victimApplicationSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  
-  // Generate application ID if new
-  if (this.isNew) {
-    const timestamp = Date.now().toString().slice(-8);
-    this.applicationId = `VIC${timestamp}`;
-  }
-  
-  next();
-});
-
-// Index for better query performance
-victimApplicationSchema.index({ applicationId: 1 });
-victimApplicationSchema.index({ user: 1 });
-victimApplicationSchema.index({ status: 1 });
+// Compound indexes
+victimApplicationSchema.index({ status: 1, createdAt: -1 });
+victimApplicationSchema.index({ 'personalDetails.aadhaarNumber': 1 });
 victimApplicationSchema.index({ createdAt: -1 });
-victimApplicationSchema.index({ assignedOfficer: 1 });
 
 module.exports = mongoose.model('VictimApplication', victimApplicationSchema);

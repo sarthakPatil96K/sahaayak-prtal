@@ -64,43 +64,43 @@ const OfficerDashboard = () => {
   }, []);
 
   const fetchApplications = async () => {
+  try {
+    setLoading(true);
+    
+    // Fetch victim applications using API service
+    const victimResult = await apiService.getApplications();
+    
+    // Fetch marriage applications
+    let marriageResult = { success: false, data: [] };
     try {
-      setLoading(true);
-      
-      // Fetch victim applications using API service
-      const victimResult = await apiService.getApplications();
-      
-      // Fetch marriage applications - using direct fetch for now
-      let marriageResult = { success: false, data: [] };
-      try {
-        const marriageResponse = await fetch('http://localhost:5000/api/intercaste-marriage');
-        if (marriageResponse.ok) {
-          marriageResult = await marriageResponse.json();
-        }
-      } catch (error) {
-        console.warn('Marriage applications endpoint not available:', error);
-      }
-      
-      if (victimResult.success) {
-        setVictimApplications(victimResult.data || []);
-      } else {
-        setVictimApplications([]);
-      }
-      
-      if (marriageResult.success) {
-        setMarriageApplications(marriageResult.data || []);
-      } else {
-        setMarriageApplications([]);
+      const marriageResponse = await fetch('http://localhost:8080/api/intercaste-marriage');
+      if (marriageResponse.ok) {
+        marriageResult = await marriageResponse.json();
       }
     } catch (error) {
-      console.error('Error fetching applications:', error);
-      alert('Failed to fetch applications. Please check if backend is running.');
-      setVictimApplications([]);
-      setMarriageApplications([]);
-    } finally {
-      setLoading(false);
+      console.warn('Marriage applications endpoint not available:', error);
     }
-  };
+    
+    if (victimResult.success) {
+      setVictimApplications(victimResult.data || []);
+    } else {
+      setVictimApplications([]);
+    }
+    
+    if (marriageResult.success) {
+      setMarriageApplications(marriageResult.data || []);
+    } else {
+      setMarriageApplications([]);
+    }
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    alert('Failed to fetch applications. Please check if backend is running on port 8080.');
+    setVictimApplications([]);
+    setMarriageApplications([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Filter applications based on search, type, and status
   const getFilteredApplications = () => {
@@ -147,87 +147,87 @@ const OfficerDashboard = () => {
   };
 
   const handleVerify = async (applicationId, isMarriage = false) => {
+  try {
+    let result;
+    
+    if (isMarriage) {
+      const response = await fetch(`http://localhost:8080/api/intercaste-marriage/${applicationId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'verified' }),
+      });
+      result = await response.json();
+    } else {
+      result = await apiService.updateApplicationStatus(applicationId, 'verified');
+    }
+    
+    if (result.success) {
+      alert('Application verified successfully!');
+      fetchApplications();
+    } else {
+      alert('Failed to verify application: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error verifying application:', error);
+    alert('Error verifying application: ' + error.message);
+  }
+};
+
+const handleApprove = async (applicationId, isMarriage = false) => {
+  try {
+    let result;
+    
+    if (isMarriage) {
+      const response = await fetch(`http://localhost:8080/api/intercaste-marriage/${applicationId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      result = await response.json();
+    } else {
+      result = await apiService.updateApplicationStatus(applicationId, 'approved');
+    }
+    
+    if (result.success) {
+      alert('Application approved successfully! DBT will be processed.');
+      fetchApplications();
+    } else {
+      alert('Failed to approve application: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error approving application:', error);
+    alert('Error approving application: ' + error.message);
+  }
+};
+
+const handleReject = async (applicationId, isMarriage = false) => {
+  if (window.confirm('Are you sure you want to reject this application?')) {
     try {
       let result;
       
       if (isMarriage) {
-        const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
+        const response = await fetch(`http://localhost:8080/api/intercaste-marriage/${applicationId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'verified' }),
+          body: JSON.stringify({ status: 'rejected' }),
         });
         result = await response.json();
       } else {
-        result = await apiService.updateApplicationStatus(applicationId, 'verified');
+        result = await apiService.updateApplicationStatus(applicationId, 'rejected');
       }
       
       if (result.success) {
-        alert('Application verified successfully!');
+        alert('Application rejected successfully!');
         fetchApplications();
       } else {
-        alert('Failed to verify application: ' + (result.message || 'Unknown error'));
+        alert('Failed to reject application: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error verifying application:', error);
-      alert('Error verifying application: ' + error.message);
+      console.error('Error rejecting application:', error);
+      alert('Error rejecting application: ' + error.message);
     }
-  };
-
-  const handleApprove = async (applicationId, isMarriage = false) => {
-    try {
-      let result;
-      
-      if (isMarriage) {
-        const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'approved' }),
-        });
-        result = await response.json();
-      } else {
-        result = await apiService.updateApplicationStatus(applicationId, 'approved');
-      }
-      
-      if (result.success) {
-        alert('Application approved successfully! DBT will be processed.');
-        fetchApplications();
-      } else {
-        alert('Failed to approve application: ' + (result.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error approving application:', error);
-      alert('Error approving application: ' + error.message);
-    }
-  };
-
-  const handleReject = async (applicationId, isMarriage = false) => {
-    if (window.confirm('Are you sure you want to reject this application?')) {
-      try {
-        let result;
-        
-        if (isMarriage) {
-          const response = await fetch(`http://localhost:5000/api/intercaste-marriage/${applicationId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'rejected' }),
-          });
-          result = await response.json();
-        } else {
-          result = await apiService.updateApplicationStatus(applicationId, 'rejected');
-        }
-        
-        if (result.success) {
-          alert('Application rejected successfully!');
-          fetchApplications();
-        } else {
-          alert('Failed to reject application: ' + (result.message || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Error rejecting application:', error);
-        alert('Error rejecting application: ' + error.message);
-      }
-    }
-  };
+  }
+};
 
   const getStatusBadge = (status) => {
     const statusConfig = {
