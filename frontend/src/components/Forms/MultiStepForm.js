@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircleIcon, 
@@ -7,6 +8,32 @@ import {
   BanknotesIcon 
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+
+// Simple API service function - define it directly to avoid import issues
+const submitApplication = async (applicationData) => {
+  try {
+    console.log('📤 Submitting application data to port 8080...', applicationData);
+
+    const response = await fetch('http://localhost:8080/api/applications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(applicationData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw new Error('Unable to connect to server. Please check if the backend is running on port 8080.');
+  }
+};
 
 const MultiStepForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -116,6 +143,8 @@ const mockBankVerification = async (accountNumber, ifscCode) => {
     }
     return true;
   };
+
+  
 const handleSubmit = async (e) => {
   e.preventDefault();
   
@@ -130,10 +159,10 @@ const handleSubmit = async (e) => {
     submitButton.textContent = 'Submitting...';
     submitButton.disabled = true;
 
-    console.log('📤 Submitting application:', formData);
+    console.log('📤 Submitting application data:', formData);
 
     // API call
-    const response = await fetch('http://localhost:5000/api/applications', {
+    const response = await fetch('http://localhost:8080/api/applications', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -141,17 +170,33 @@ const handleSubmit = async (e) => {
       body: JSON.stringify(formData),
     });
 
-    console.log('📥 Response status:', response.status);
-
+    console.log('📨 Response status:', response.status);
+    
     const result = await response.json();
-    console.log('📥 Response data:', result);
-
+    console.log('📨 Full response:', result);
+    
     if (!response.ok) {
-      throw new Error(result.message || `HTTP error! status: ${response.status}`);
+      throw new Error(result.message || `Server error: ${response.status}`);
     }
-
+    
     if (result.success) {
-      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${result.data.id}\nAmount: ₹${result.data.amount}\nStatus: ${result.data.status}\n\nPlease save your Tracking ID for future reference.`);
+      // Handle different possible tracking ID locations
+      let trackingId;
+      if (result.data && result.data.applicationId) {
+        trackingId = result.data.applicationId;
+      } else if (result.data && result.data.id) {
+        trackingId = result.data.id;
+      } else if (result.trackingId) {
+        trackingId = result.trackingId;
+      } else if (result.data && result.data._id) {
+        trackingId = result.data._id;
+      } else {
+        trackingId = 'Unknown ID - Please contact support';
+      }
+      
+      console.log('🆔 Extracted Tracking ID:', trackingId);
+      
+      alert(`✅ Application submitted successfully!\n\nYour Tracking ID: ${trackingId}\n\nPlease save this ID for future reference.`);
       
       // Reset form
       setCurrentStep(1);
@@ -184,18 +229,11 @@ const handleSubmit = async (e) => {
         }
       });
     } else {
-      throw new Error(result.message || 'Failed to submit application');
+      alert(`❌ Failed to submit application: ${result.message}`);
     }
   } catch (error) {
     console.error('❌ Submission error:', error);
-    
-    if (error.message.includes('fetch') || error.message.includes('Network')) {
-      alert('🔌 Network Error!\n\nPlease ensure:\n1. Backend server is running on port 5000\n2. No firewall blocking the connection\n3. Check browser console (F12) for details');
-    } else if (error.message.includes('HTTP error')) {
-      alert(`❌ Server Error: ${error.message}\n\nPlease check backend server logs.`);
-    } else {
-      alert(`❌ Error: ${error.message}`);
-    }
+    alert(`❌ Error: ${error.message}`);
   } finally {
     // Reset button state
     const submitButton = e.target.querySelector('button[type="submit"]');

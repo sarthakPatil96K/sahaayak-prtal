@@ -4,7 +4,13 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
+const connectDB = require('./config/database');
+
+// Initialize express app
 const app = express();
+
+// Connect to MongoDB
+connectDB();
 
 // CORS configuration
 app.use(cors({
@@ -20,9 +26,9 @@ app.use(morgan('combined'));
 app.use(express.json());
 
 // Routes
-app.use('/api/applications', require('./routes/applications'));
-// In backend/src/server.js, add:
-app.use('/api/intercaste-marriage', require('./routes/intercasteMarriage'));
+app.use('/api/applications', require('./routes/applications')); // Victim applications
+app.use('/api/intercaste-marriage', require('./routes/marriageApplications')); // Marriage applications
+app.use('/api/test', require('./routes/test')); // Test routes
 
 // API root route
 app.get('/api', (req, res) => {
@@ -33,6 +39,8 @@ app.get('/api', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       applications: '/api/applications',
+      marriage: '/api/intercaste-marriage',
+      test: '/api/test',
       health: '/api/health'
     }
   });
@@ -86,7 +94,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 SAHAAYAK Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);

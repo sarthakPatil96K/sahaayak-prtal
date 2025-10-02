@@ -1,182 +1,157 @@
 const mongoose = require('mongoose');
 
-const coupleSchema = new mongoose.Schema({
-  husband: {
-    name: {
-      type: String,
-      required: true
-    },
-    aadhaarNumber: {
-      type: String,
-      required: true,
-      match: [/^\d{12}$/, 'Please provide a valid 12-digit Aadhaar number']
-    },
-    dateOfBirth: Date,
-    casteCategory: {
-      type: String,
-      required: true,
-      enum: ['SC', 'ST', 'OBC', 'General', 'Other']
-    },
-    fatherName: String
-  },
-  wife: {
-    name: {
-      type: String,
-      required: true
-    },
-    aadhaarNumber: {
-      type: String,
-      required: true,
-      match: [/^\d{12}$/, 'Please provide a valid 12-digit Aadhaar number']
-    },
-    dateOfBirth: Date,
-    casteCategory: {
-      type: String,
-      required: true,
-      enum: ['SC', 'ST', 'OBC', 'General', 'Other']
-    },
-    fatherName: String
-  }
-});
-
-const marriageDetailsSchema = new mongoose.Schema({
-  marriageDate: {
-    type: Date,
-    required: true
-  },
-  marriageCertificateNumber: String,
-  certificateDocument: {
-    url: String,
-    verified: Boolean,
-    verifiedAt: Date
-  },
-  placeOfMarriage: {
-    address: String,
-    city: String,
-    district: String,
-    state: String
-  },
-  witness1: {
-    name: String,
-    aadhaar: String,
-    address: String
-  },
-  witness2: {
-    name: String,
-    aadhaar: String,
-    address: String
-  }
-});
-
 const marriageApplicationSchema = new mongoose.Schema({
   applicationId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
-  couple: coupleSchema,
-  contactDetails: {
-    address: {
-      street: String,
-      city: String,
-      district: String,
-      state: String,
-      pincode: String
+  coupleDetails: {
+    husbandName: { 
+      type: String, 
+      required: [true, 'Husband name is required'],
+      trim: true
     },
-    mobileNumber: {
+    husbandAadhaar: { 
+      type: String, 
+      required: [true, 'Husband Aadhaar is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{12}$/.test(v);
+        },
+        message: 'Husband Aadhaar must be 12 digits'
+      }
+    },
+    husbandCaste: { 
+      type: String, 
+      required: [true, 'Husband caste is required'],
+      trim: true
+    },
+    wifeName: { 
+      type: String, 
+      required: [true, 'Wife name is required'],
+      trim: true
+    },
+    wifeAadhaar: { 
+      type: String, 
+      required: [true, 'Wife Aadhaar is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{12}$/.test(v);
+        },
+        message: 'Wife Aadhaar must be 12 digits'
+      }
+    },
+    wifeCaste: { 
+      type: String, 
+      required: [true, 'Wife caste is required'],
+      trim: true
+    },
+    marriageDate: { 
+      type: Date, 
+      required: [true, 'Marriage date is required'] 
+    },
+    marriageCertificateNumber: { 
+      type: String, 
+      required: [true, 'Marriage certificate number is required'],
+      trim: true
+    }
+  },
+  addressDetails: {
+    address: { 
+      type: String, 
+      required: [true, 'Address is required'],
+      trim: true
+    },
+    pincode: { 
       type: String,
-      required: true
+      required: [true, 'Pincode is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{6}$/.test(v);
+        },
+        message: 'Pincode must be 6 digits'
+      }
     },
-    email: String
+    state: { 
+      type: String, 
+      required: [true, 'State is required'],
+      trim: true
+    },
+    district: { 
+      type: String, 
+      required: [true, 'District is required'],
+      trim: true
+    },
+    mobileNumber: { 
+      type: String, 
+      required: [true, 'Mobile number is required'],
+      validate: {
+        validator: function(v) {
+          return /^\d{10}$/.test(v);
+        },
+        message: 'Mobile number must be 10 digits'
+      }
+    },
+    email: { 
+      type: String,
+      lowercase: true,
+      validate: {
+        validator: function(v) {
+          return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        },
+        message: 'Invalid email format'
+      }
+    }
   },
   bankDetails: {
-    accountHolderName: {
-      type: String,
-      required: true
+    accountNumber: { 
+      type: String, 
+      required: [true, 'Account number is required'],
+      trim: true
     },
-    accountNumber: {
-      type: String,
-      required: true
+    ifscCode: { 
+      type: String, 
+      required: [true, 'IFSC code is required'],
+      trim: true,
+      uppercase: true
     },
-    ifscCode: {
-      type: String,
-      required: true
+    bankName: { 
+      type: String, 
+      required: [true, 'Bank name is required'],
+      trim: true
     },
-    bankName: {
-      type: String,
-      required: true
+    accountHolderName: { 
+      type: String, 
+      required: [true, 'Account holder name is required'],
+      trim: true
     },
-    branch: String,
-    jointAccount: {
-      type: Boolean,
-      default: false
-    }
+    branch: { type: String, trim: true }
   },
   status: {
     type: String,
-    enum: ['pending', 'under_review', 'verified', 'approved', 'rejected', 'disbursed'],
-    default: 'pending'
+    enum: ['pending', 'verified', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
   },
   amount: {
     type: Number,
-    required: true,
-    default: 250000
+    default: 250000 // Different amount for marriage applications
   },
-  assignedOfficer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Officer'
-  },
-  processingHistory: [{
-    status: String,
-    actionBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Officer'
-    },
-    comments: String,
-    timestamp: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  disbursementDetails: {
-    disbursedAmount: Number,
-    transactionId: String,
-    disbursedAt: Date,
-    utrNumber: String
-  },
-  rejectionReason: String,
-  documents: [{
-    documentType: String, // 'caste_certificate_husband', 'caste_certificate_wife', 'marriage_certificate'
-    documentUrl: String,
-    verified: Boolean,
-    verifiedAt: Date
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  applicationType: {
+    type: String,
+    default: 'marriage',
+    immutable: true
   }
+}, {
+  timestamps: true
 });
 
-marriageApplicationSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  
-  if (this.isNew) {
-    const timestamp = Date.now().toString().slice(-8);
-    this.applicationId = `MAR${timestamp}`;
-  }
-  
-  next();
-});
-
-// Indexes
-marriageApplicationSchema.index({ applicationId: 1 });
-marriageApplicationSchema.index({ 'couple.husband.aadhaarNumber': 1 });
-marriageApplicationSchema.index({ 'couple.wife.aadhaarNumber': 1 });
-marriageApplicationSchema.index({ status: 1 });
+// Compound indexes
+marriageApplicationSchema.index({ status: 1, createdAt: -1 });
+marriageApplicationSchema.index({ 'coupleDetails.husbandAadhaar': 1 });
+marriageApplicationSchema.index({ 'coupleDetails.wifeAadhaar': 1 });
 marriageApplicationSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('MarriageApplication', marriageApplicationSchema);
