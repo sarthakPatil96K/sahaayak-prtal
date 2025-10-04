@@ -257,7 +257,7 @@ const InterCasteMarriage = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/api/intercaste-marriage', {
+  const response = await fetch(`${API_BASE_URL}/intercaste-marriage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

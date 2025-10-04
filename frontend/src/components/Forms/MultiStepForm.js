@@ -229,7 +229,7 @@ const MultiStepForm = () => {
     const loadingToast = toast.loading('Submitting your application...');
     
     try {
-      const response = await fetch('http://localhost:8080/api/applications', {
+  const response = await fetch(`${API_BASE_URL}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
