@@ -1,5 +1,5 @@
 
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL } from '../config';
 
 // Helper function for API calls
 const fetchWithErrorHandling = async (url, options = {}) => {

@@ -12,7 +12,7 @@ import {
 import ApplicationDetailsModal from '../components/ApplicationDetailsModal';
 
 // Standardized API base URL
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL } from '../config';
 
 const OfficerDashboard = () => {
   const [activeTab, setActiveTab] = useState('all');
