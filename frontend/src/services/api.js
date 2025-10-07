@@ -1,5 +1,5 @@
-// Direct URL - no config import needed
-const API_BASE_URL = 'http://localhost:8080/api';
+
+import { API_BASE_URL } from '../config';
 
 // Helper function for API calls
 const fetchWithErrorHandling = async (url, options = {}) => {

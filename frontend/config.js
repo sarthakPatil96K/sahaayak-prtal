@@ -1,8 +1,2 @@
-const config = {
-  api: {
-    baseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api',
-    backendUrl: process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'
-  }
-};
-
-export default config;
+// Use REACT_APP_API_URL for deployment flexibility
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';

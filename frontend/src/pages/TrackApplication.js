@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import React, { useState } from 'react';
 import { MagnifyingGlassIcon, DocumentTextIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
@@ -22,10 +23,10 @@ const TrackApplication = () => {
       let appType = '';
 
       if (idUpper.startsWith('MAR')) {
-        endpoint = `http://localhost:8080/api/intercaste-marriage/${trackingId}`;
+  endpoint = `${API_BASE_URL}/intercaste-marriage/${trackingId}`;
         appType = 'marriage';
       } else if (idUpper.startsWith('VIC')) {
-        endpoint = `http://localhost:8080/api/applications/${trackingId}`;
+  endpoint = `${API_BASE_URL}/applications/${trackingId}`;
         appType = 'victim';
       } else {
         throw new Error("Invalid Application ID format. It should start with 'VIC' or 'MAR'.");

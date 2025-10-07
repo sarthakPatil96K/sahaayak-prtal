@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import React, { useState } from 'react';
 import { HeartIcon, UserIcon, DocumentTextIcon, BanknotesIcon, CheckCircleIcon, ArrowUpTrayIcon, ShieldCheckIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import jsPDF from 'jspdf';
@@ -257,7 +258,7 @@ const InterCasteMarriage = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/api/intercaste-marriage', {
+  const response = await fetch(`${API_BASE_URL}/intercaste-marriage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

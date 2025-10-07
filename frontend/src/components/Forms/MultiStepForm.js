@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config';
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -212,6 +213,7 @@ const MultiStepForm = () => {
       return;
     }
     if (!validateStep(currentStep)) return;
+    
 
     // Flatten the nested objects into simple strings to match the backend schema
     const payload = {
@@ -229,7 +231,9 @@ const MultiStepForm = () => {
     const loadingToast = toast.loading('Submitting your application...');
     
     try {
-      const response = await fetch('http://localhost:8080/api/applications', {
+      console.log(process.env.REACT_APP_API_BASE_URL);
+      
+  const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
