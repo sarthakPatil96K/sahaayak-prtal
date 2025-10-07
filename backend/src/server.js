@@ -14,7 +14,7 @@ connectDB();
 
 // CORS configuration
 app.use(cors({
-  origin: ['sahaayakportal-4p29fuf5q-vaishnavpatil2005-3740s-projects.vercel.app' , 'sahaayakportal-git-main-vaishnavpatil2005-3740s-projects.vercel.app','http://localhost:3000', 'http://127.0.0.1:3000' , 'https://sahayak-portal.vercel.app'],
+  origin: ['https://sahaayakportal-git-main-vaishnavpatil2005-3740s-projects.vercel.app/','sahaayakportal-4p29fuf5q-vaishnavpatil2005-3740s-projects.vercel.app' , 'sahaayakportal-git-main-vaishnavpatil2005-3740s-projects.vercel.app','http://localhost:3000', 'http://127.0.0.1:3000' , 'https://sahayak-portal.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
